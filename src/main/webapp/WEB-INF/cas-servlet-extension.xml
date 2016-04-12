@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Licensed to Jasig under one or more contributor license
+    agreements. See the NOTICE file distributed with this work
+    for additional information regarding copyright ownership.
+    Jasig licenses this file to you under the Apache License,
+    Version 2.0 (the "License"); you may not use this file
+    except in compliance with the License.  You may obtain a
+    copy of the License at the following location:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+
+-->
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:webflow="http://www.springframework.org/schema/webflow-config"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:c="http://www.springframework.org/schema/c"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
+       http://www.springframework.org/schema/webflow-config http://www.springframework.org/schema/webflow-config/spring-webflow-config-2.3.xsd">
+
+  
+  <!-- 验证码 -->
+  <bean id="capatchaController" class="com.travel.cas.site.web.CaptchaController"/>
+  
+  
+  <!-- register webflow configuration -->
+  <!-- 流程文件 -->
+  <webflow:flow-registry id="registerFlowRegistry" flow-builder-services="builder">
+    <webflow:flow-location path="/WEB-INF/register-webflow.xml" id="register" />
+  </webflow:flow-registry>
+  <!-- 流程执行器，和流程文件一对一 -->
+  <webflow:flow-executor id="registerFlowExecutor" flow-registry="registerFlowRegistry">
+    <webflow:flow-execution-attributes>
+      <webflow:always-redirect-on-pause value="false" />
+      <webflow:redirect-in-same-state value="false" />
+    </webflow:flow-execution-attributes>
+    <webflow:flow-execution-listeners>
+      <webflow:listener ref="terminateWebSessionListener" />
+    </webflow:flow-execution-listeners>
+  </webflow:flow-executor>
+  <!-- sping mvc handleMapping 作用：将request 映射到类-->
+  <bean id="registerFlowHandlerMapping" class="org.springframework.webflow.mvc.servlet.FlowHandlerMapping"
+        p:flowRegistry-ref="registerFlowRegistry" p:order="4">
+    <property name="interceptors">
+      <ref bean="localeChangeInterceptor" /><!-- <ref local="localeChangeInterceptor" /> -->
+    </property>
+  </bean>
+  <!-- sping mvc handleAdapter 作用：执行类( handleMapping 获取的handle)的方法获取modelview-->
+  <bean id="registerHandlerAdapter" class="org.jasig.cas.web.flow.SelectiveFlowHandlerAdapter"
+        p:supportedFlowId="register" p:flowExecutor-ref="registerFlowExecutor" p:flowUrlHandler-ref="registerFlowUrlHandler" />
+  <bean id="registerFlowUrlHandler" class="org.jasig.cas.web.flow.CasDefaultFlowUrlHandler" />
+  
+   
+  <bean id="initialRegisterFlowAction" class="com.travel.cas.site.register.action.InitialRegisterFlowAction"/>
+   
+  <bean id="generateRegisterTicketAction" class="com.travel.cas.site.register.action.GenerateRegisterTicketAction"
+        p:ticketIdGenerator-ref="registerTicketUniqueIdGenerator"/>
+        
+  <bean id="registerViaFormAction" class="com.travel.cas.site.register.action.RegisterViaFormAction"
+  	     p:userService-ref="userService" />  
+  
+  <bean id="registerExceptionHandler" class="com.travel.cas.site.register.exception.RegisterExceptionHandler" />
+  
+  <!-- <bean id="redirectLoginAction" class="com.travel.cas.sitee.register.action.RedirectLoginAction" /> -->
+  
+  		 
+  		 
+  		 
+ <!-- retakeP webflow configuration -->
+  <!-- 流程文件 -->
+  <webflow:flow-registry id="retakePFlowRegistry" flow-builder-services="builder">
+    <webflow:flow-location path="/WEB-INF/retakeP-webflow.xml" id="retakeP" />
+  </webflow:flow-registry>
+  <!-- 流程执行器，和流程文件一对一 -->
+  <webflow:flow-executor id="retakePFlowExecutor" flow-registry="retakePFlowRegistry">
+    <webflow:flow-execution-attributes>
+      <webflow:always-redirect-on-pause value="false" />
+      <webflow:redirect-in-same-state value="false" />
+    </webflow:flow-execution-attributes>
+    <webflow:flow-execution-listeners>
+      <webflow:listener ref="terminateWebSessionListener" />
+    </webflow:flow-execution-listeners>
+  </webflow:flow-executor>
+  <!-- sping mvc handleMapping 作用：将request 映射到类-->
+  <bean id="retakePFlowHandlerMapping" class="org.springframework.webflow.mvc.servlet.FlowHandlerMapping"
+        p:flowRegistry-ref="retakePFlowRegistry" p:order="5">
+    <property name="interceptors">
+      <ref bean="localeChangeInterceptor" /><!-- <ref local="localeChangeInterceptor" /> -->
+    </property>
+  </bean>
+  <!-- sping mvc handleAdapter 作用：执行类( handleMapping 获取的handle)的方法获取modelview-->
+  <bean id="retakePHandlerAdapter" class="org.jasig.cas.web.flow.SelectiveFlowHandlerAdapter"
+        p:supportedFlowId="retakeP" p:flowExecutor-ref="retakePFlowExecutor" p:flowUrlHandler-ref="retakePFlowUrlHandler" />
+  <bean id="retakePFlowUrlHandler" class="org.jasig.cas.web.flow.CasDefaultFlowUrlHandler" />
+  
+  
+  <bean id="initialRetakePFlowAction" class="com.travel.cas.site.retakeP.action.InitialRetakePFlowAction"/>
+  
+  <bean id="generateRetakePTicketAction" class="com.travel.cas.site.retakeP.action.GenerateRetakePTicketAction"
+        p:ticketIdGenerator-ref="retakePTicketUniqueIdGenerator"/>
+  
+  <bean id="retakePViaFormAction" class="com.travel.cas.site.retakeP.action.RetakePViaFormAction"
+  	     p:userService-ref="userService" /> 
+  	     
+  <bean id="regtakePExceptionHandler" class="com.travel.cas.site.retakeP.exception.RegtakePExceptionHandler"/>
+ 
+     
+</beans>

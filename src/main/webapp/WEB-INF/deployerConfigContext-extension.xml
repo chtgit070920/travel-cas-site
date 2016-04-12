@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Licensed to Jasig under one or more contributor license
+    agreements. See the NOTICE file distributed with this work
+    for additional information regarding copyright ownership.
+    Jasig licenses this file to you under the Apache License,
+    Version 2.0 (the "License"); you may not use this file
+    except in compliance with the License.  You may obtain a
+    copy of the License at the following location:
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+
+-->
+
+
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:c="http://www.springframework.org/schema/c"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xmlns="http://www.springframework.org/schema/beans"
+       xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+       http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+
+    <bean id="dataSource"
+          class="com.mchange.v2.c3p0.ComboPooledDataSource" destroy-method="close">
+        <property name="driverClass" value="${jdbc.driverClassName}"/>
+        <property name="jdbcUrl" value="${jdbc.url}"/>
+        <property name="user" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+        <property name="autoCommitOnClose" value="${datasource.autoCommitOnClose}"/>
+        <property name="minPoolSize" value="${datasource.minPoolSize}"/>
+        <property name="maxPoolSize" value="${datasource.maxPoolSize}"/>
+        <property name="initialPoolSize" value="${datasource.initialPoolSize}"/>
+        <property name="maxIdleTime" value="${datasource.maxIdleTime}"/>
+        <property name="acquireIncrement" value="${datasource.acquireIncrement}"/>
+        <property name="acquireRetryAttempts" value="${datasource.acquireRetryAttempts}"/>
+        <property name="checkoutTimeout" value="${datasource.checkoutTimeout}"/>
+    </bean>
+
+    <bean id="passwordEncoder"
+          class="org.jasig.cas.authentication.handler.DefaultPasswordEncoder"
+          c:encodingAlgorithm="MD5"
+          p:characterEncoding="UTF-8"
+    />
+
+
+    <!-- ========================== 2、认证handler与resolver  ========================== -->
+    <!-- 2.1、db handler -->
+    <bean id="dbAuthenticationHandler"
+          class="org.jasig.cas.adaptors.jdbc.QueryDatabaseAuthenticationHandler"
+          p:dataSource-ref="dataSource"
+          p:passwordEncoder-ref="passwordEncoder"
+          p:sql="select password from t_member where mobile = ? and state='1' ">
+    </bean>
+    <!--2.2、 dbPrincipalResolver-->
+    <bean id="dbPrincipalResolver"
+          class="org.jasig.cas.authentication.principal.PersonDirectoryPrincipalResolver">
+        <property name="attributeRepository" ref="dbAttributeRepository"/>
+    </bean>
+    <bean id="dbAttributeRepository"
+          class="org.jasig.services.persondir.support.jdbc.SingleRowJdbcPersonAttributeDao">
+        <constructor-arg index="0" ref="dataSource"/>
+        <constructor-arg index="1" value="select id,mobile,email,name from t_member where {0}"/>
+        <property name="queryType" ref="queryType"/>
+        <property name="queryAttributeMapping">
+            <map>
+                <entry key="username">
+                    <list>
+                        <value>mobile</value>
+                    </list>
+                </entry>
+            </map>
+        </property>
+        <property name="resultAttributeMapping">
+            <map>
+                <entry key="id" value="id"/>
+                <entry key="name" value="name"/>
+                <entry key="email" value="email"/>
+                <entry key="mobile" value="mobile"/>
+            </map>
+        </property>
+    </bean>
+    <util:constant id="queryType" static-field="org.jasig.services.persondir.support.QueryType.OR"/>
+
+
+    <!-- ========================== 4、会员相关  ========================== -->
+    <bean id="userService" class="com.travel.cas.site.member.service.UserService"
+          p:passwordEncoder-ref="passwordEncoder"
+          p:userDao-ref="userDao"
+    />
+    <bean id="userDao"
+          class="com.travel.cas.site.member.dao.UserDao">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+
+</beans>

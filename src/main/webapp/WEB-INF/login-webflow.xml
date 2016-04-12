@@ -1,0 +1,368 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Licensed to Jasig under one or more contributor license
+    agreements. See the NOTICE file distributed with this work
+    for additional information regarding copyright ownership.
+    Jasig licenses this file to you under the Apache License,
+    Version 2.0 (the "License"); you may not use this file
+    except in compliance with the License.  You may obtain a
+    copy of the License at the following location:
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+
+-->
+<flow xmlns="http://www.springframework.org/schema/webflow"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.springframework.org/schema/webflow
+                          http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd">
+
+    <var name="credential" class="org.jasig.cas.authentication.UsernamePasswordCredential" />
+   
+    <!-- 
+   description:登录环境初始化			
+   class:InitialFlowSetupAction
+     set->warnCookieGenerator.setCookiePath(xxx)
+         ticketGrantingTicketCookieGenerator.setCookiePath(xxx) 
+     flowscop->"ticketGrantingTicketId":"xxx"（注：xxx取 cookie“CASTGC”value，value本质是TicketGrantTicket的id）
+              "warnCookieValue":"xxx"（注：xxx取 cookie“CASPRIVACY”的value，value本质是“是否存在警告的布尔值”）
+              "service":Service实例（由 CasArgumentExtractor来完成 SimpleWebApplicationServiceImpl实例的生成）
+     -->
+    <on-start>
+        <evaluate expression="initialFlowSetupAction" />
+    </on-start>
+
+	<!--  
+	description:验证 flowscop#ticketGrantingTicketId对应的ticketGrantingTicket 是否存在于DefaultTicketRegistry中、若存在是否合法
+	                不存在=> gateway请求验证
+	                     =>yes(service非空 and gateway 非空)：可能将直接redirect客户端...；
+	                     =>no=>验证RegisterService合法=>生成登录token=>登录页面...
+	                存在单非法=>清理会话=> gateway请求验证（继续不存在流程）
+	                存在且合法=>service存在验证
+	                       =>no=>生成登录token=>登录页面...
+	                       =>yes=>是否renew请求
+	                               =>yes=>验证RegisterService合法=>生成登录token=>登录页面...
+	                               =>no=>生成ServiceTicket=>...
+   总结：当不存在gateway和renew参数时
+          =>第一次访问受保护的客户项目资源
+          =>后续再访问受保护的客户项目资源
+	                                         
+	验证class:TicketGrantingTicketCheckAction
+	-->
+	<action-state id="ticketGrantingTicketCheck">
+        <evaluate expression="ticketGrantingTicketCheckAction.checkValidity(flowRequestContext)"/>
+        <transition on="notExists" to="gatewayRequestCheck"/>
+        <transition on="invalid" to="terminateSession"/>
+        <transition on="valid" to="hasServiceCheck"/>
+	</action-state>
+	
+	
+	<!--  
+   description:会话清理（包括 清除CASTGC cookie、CASPRIVACY cookie；TicketRegistry 清理ticket；...）
+	清理class:TerminateSessionAction
+    -->
+    <action-state id="terminateSession">
+        <evaluate expression="terminateSessionAction.terminate(flowRequestContext)"/>
+        <transition to="gatewayRequestCheck"/>
+    </action-state>
+    
+    
+    <!--  
+   description:验证是否是gateway请求
+    	if “gateway 非空” 且 “service 非空” then  gatewayService 验证（最终可能直接redirect 客户端）
+    	else  RegisterService 合法验证
+    -->
+	<decision-state id="gatewayRequestCheck">
+		<if test="requestParameters.gateway != '' and requestParameters.gateway != null and flowScope.service != null" then="gatewayServicesManagementCheck" else="serviceAuthorizationCheck" />
+	</decision-state>
+	
+	
+	<!--  
+   description:验证service参数
+                if “service非空” then 验证 是否renew 请求
+                else 生成登录token 进行登录（非客户端项目登录，即在cas直接登录）
+    -->
+	<decision-state id="hasServiceCheck">
+		<if test="flowScope.service != null" then="renewRequestCheck" else="viewGenericLoginSuccess" />
+	</decision-state>
+	
+	
+	<!--  
+   description:验证renew参数
+            if “renew非空” then 验证ServicesManager管控的RegisterService是否可用 (表明此次请求必须重新认证，换言之重新登录)
+            else  生成ServiceTicket（使用之前存在的TicketGrantTicket）
+    -->
+	<decision-state id="renewRequestCheck">
+		<if test="requestParameters.renew != '' and requestParameters.renew != null" then="serviceAuthorizationCheck" else="generateServiceTicket" />
+	</decision-state>
+
+   <!-- Do a service authorization check early without the need to login first -->
+    <!--  
+   description: 验证ServicesManager管控的RegisterService是否可用（包括 数目是否>1;RegisterService is enable等）
+	class:ServiceAuthorizationCheck
+    -->
+   <action-state id="serviceAuthorizationCheck">
+        <evaluate expression="serviceAuthorizationCheck"/>
+        <transition to="generateLoginTicket"/>
+   </action-state>
+	
+	<!-- 
+		The "warn" action makes the determination of whether to redirect directly to the requested
+		service or display the "confirmation" page to go back to the server.
+	-->
+	<!--  
+   description:验证warnCookieValue值
+              if flowScope.warnCookieValue=true then
+              else  执行跳转
+	-->
+	<decision-state id="warn">
+		<if test="flowScope.warnCookieValue" then="showWarningView" else="redirect" />
+	</decision-state>
+	
+	<!-- 
+	<action-state id="startAuthenticate">
+		<action bean="x509Check" />
+		<transition on="success" to="sendTicketGrantingTicket" />
+		<transition on="warn" to="warn" />
+		<transition on="error" to="generateLoginTicket" />
+	</action-state>
+	 -->
+	<!--  
+	description:生成loginTicket并存储于flowscop中；存储格式为：“loginTicket”:“LT-2-dflkdjljklj-cas.wdlt.com”。
+	class:GenerateLoginTicketAction
+	-->
+	<action-state id="generateLoginTicket">
+      <evaluate expression="generateLoginTicketAction.generate(flowRequestContext)" />
+		<transition on="generated" to="viewLoginForm" />
+	</action-state>
+    
+    <!--  
+   description:
+   			1>、在viewscop范围内存储commandName='credential'
+   			2>、进入view（默认为view/jsp/default/ui/casLoginView.jsp）
+   			3>、用户提交
+   			4>、执行authenticationViaFormAction.doBind、绑定数据、验证数据合法性、跳转至realSubmit state。
+   			4.1>、authenticationViaFormAction说明
+   					class:AuthenticationViaFormAction
+   					method:doBind作用->自定义数据绑定，即覆盖spring的数据bind。    
+    -->
+	<view-state id="viewLoginForm" view="casLoginView" model="credential">
+        <binder>
+            <binding property="username" />
+            <binding property="password" />
+        </binder>
+        <on-entry>
+            <set name="viewScope.commandName" value="'credential'" />
+        </on-entry>
+		<transition on="submit" bind="true" validate="true" to="realSubmit">
+            <evaluate expression="authenticationViaFormAction.doBind(flowRequestContext, flowScope.credential)" />
+      </transition>
+	</view-state>
+
+
+  <!--  
+  description:
+  			1>、验证“request范围内的loginTicket“和”flowscop范围内的loginTicket“是否一致
+  			2>、存在renew参数，....
+  			    2.1>、生成ServiceTicket
+  			    2.2>、....
+  			   2.3>、=====================================================================> warn
+  			   
+  			   如果捕获AuthenticationException==============================================> handleAuthenticationFailure
+               如果捕获Exception============================================================> error
+  			   
+  			3>、不存在renew参数，...
+  			    3.1>、凭据验证
+  			    3.2>、生成TicketGrantingTicket、并缓存到TicketRegistry
+  			    3.2>、重新在viewScope中存储“ticketGrantingTicketId”值
+  			    3.3>、根据客户端请求（or还是登录请求，待验证）参数中是否存在“warn”来判定Response是否add/remove CASPRIVACY cookie。
+  			    3.4>、如果TicketGrantingTicket#authentication#successes#warnings>0  ==========> successWithWarnings
+  			          否则===========================================================================================>  sendTicketGrantingTicket
+                      
+               如果捕获AuthenticationException===============================================> handleAuthenticationFailure
+               如果捕获Exception=============================================================> error
+                
+                
+      备注：存储CASTGC cookie（值为TicketGrantingTicket的id）、CASPRIVACY cookie（true/false）、
+  -->
+  <action-state id="realSubmit">
+    <evaluate expression="authenticationViaFormAction.submit(flowRequestContext, flowScope.credential, messageContext)" />
+    <transition on="warn" to="warn" />
+    <transition on="success" to="sendTicketGrantingTicket" />
+    <transition on="successWithWarnings" to="showMessages" />
+    <transition on="authenticationFailure" to="handleAuthenticationFailure" />
+    <transition on="error" to="generateLoginTicket" />
+  </action-state>
+
+  <!--  
+  	description:
+  	1>、将所有信息存储入requestScope.messages中。
+  	2>、进入 /WEB-INF/view/jsp/default/ui/casLoginMessageView.jsp，并显示所有消息（此处即为TicketGrantingTicket#authentication#successes#warnings的警告信息）
+    3>、用户自行抉择是否继续下一步，若用户继续下一步===>serviceCheck
+  -->
+  <view-state id="showMessages" view="casLoginMessageView">
+    <on-entry>
+      <evaluate expression="sendTicketGrantingTicketAction" />
+      <set name="requestScope.messages" value="messageContext.allMessages" />
+    </on-entry>
+    <transition on="proceed" to="serviceCheck" />
+  </view-state>
+
+
+  <!--  
+  description:处理认证失败
+               帐号不可用异常=> 帐号不可用页面
+               帐号被锁异常=>帐号被锁页面
+               凭据失效异常=>失效页面
+               资源无权限访问异常=>资源无权限访问页面
+               资源当前时间无权限异常=>资源当前时间无权限异常页面
+               登录失败异常、帐号未发现异常、未知=>生成login token、登录页面
+  -->
+  <action-state id="handleAuthenticationFailure">
+    <evaluate expression="authenticationExceptionHandler.handle(currentEvent.attributes.error, messageContext)" />
+    <transition on="AccountDisabledException" to="casAccountDisabledView"/>
+    <transition on="AccountLockedException" to="casAccountLockedView"/>
+    <transition on="CredentialExpiredException" to="casExpiredPassView"/>
+    <transition on="InvalidLoginLocationException" to="casBadWorkstationView"/>
+    <transition on="InvalidLoginTimeException" to="casBadHoursView"/>
+    <transition on="FailedLoginException" to="generateLoginTicket"/>
+    <transition on="AccountNotFoundException" to="generateLoginTicket"/>
+    <transition on="UNKNOWN" to="generateLoginTicket"/>
+  </action-state>
+
+
+    <!--  
+    	1>、Response add cookie CASTGC cookie（值为TicketGrantingTicket的id）
+    -->
+	<action-state id="sendTicketGrantingTicket">
+    <evaluate expression="sendTicketGrantingTicketAction" />
+	 <transition to="serviceCheck" />
+	</action-state>
+
+
+   <!--  
+   if “flowScope.service 非空” then 生成 ServiceTicket
+   else viewGenericLoginSuccess（直接导向登录成功页面（非客户端项目登录，即在cas直接登录））
+   -->
+	<decision-state id="serviceCheck">
+		<if test="flowScope.service != null" then="generateServiceTicket" else="viewGenericLoginSuccess" />
+	</decision-state>
+	
+	
+	<!--  
+	  1>、生成ServiceTicket 并纳入到 TicketRegistry（与管理TicketGrantTicket的TicketRegistry 非同一个实例，但都是DefaultTicketRegistry的实例）管理中 。
+	  2>、再 requestScope 中放入： "serviceTicketId":ServiceTicket#id
+	  
+	        success=>warn 
+	-->
+	<action-state id="generateServiceTicket">
+    <evaluate expression="generateServiceTicketAction" />
+	 <transition on="success" to ="warn" />
+    <transition on="authenticationFailure" to="handleAuthenticationFailure" />
+    <transition on="error" to="generateLoginTicket" />
+	 <transition on="gateway" to="gatewayServicesManagementCheck" />
+	</action-state>
+
+    
+     <!--  
+     description:当“gateway非空 且 service 非空”且匹配ServicesManager管控的其中一个RegisteredService，
+                       那么cas服务端就将直接将地址重定向到service指向的url。
+                 so，可只cas仅做了一次重定向而已。
+     -->
+    <action-state id="gatewayServicesManagementCheck">
+        <evaluate expression="gatewayServicesManagementCheck" />
+        <transition on="success" to="redirect" />
+    </action-state>
+
+    <!--  
+    description:根据“请求中的serviceTIcketId”初始化Response 实例。
+    requestScope.serviceTicketId 为serviceTicket#id
+    -->
+    <action-state id="redirect">
+        <evaluate expression="flowScope.service.getResponse(requestScope.serviceTicketId)" result-type="org.jasig.cas.authentication.principal.Response" result="requestScope.response" />
+        <transition to="postRedirectDecision" />
+    </action-state>
+
+      <!--  
+    description:
+    	if response type="post" then poseView
+    	else ... redirectView
+      -->
+    <decision-state id="postRedirectDecision">
+        <if test="requestScope.response.responseType.name() == 'POST'" then="postView" else="redirectView" />
+    </decision-state>
+
+	<!-- 
+		the "viewGenericLogin" is the end state for when a user attempts to login without coming directly from a service.
+		They have only initialized their single-sign on session.
+	-->
+	<!--  
+	非客户端项目登录，即在cas直接登录将跳转至此页面
+	-->
+	<end-state id="viewGenericLoginSuccess" view="casLoginGenericSuccessView" />
+
+
+	<!-- 
+		The "showWarningView" end state is the end state for when the user has requested privacy settings (to be "warned") to be turned on.  It delegates to a 
+		view defines in default_views.properties that display the "Please click here to go to the service." message.
+	-->
+	<end-state id="showWarningView" view="casLoginConfirmView" />
+
+
+  <!-- Password policy failure states -->
+  <end-state id="abstactPasswordChangeView">
+    <on-entry>
+      <set name="flowScope.passwordPolicyUrl" value="passwordPolicy.passwordPolicyUrl" />
+    </on-entry>
+  </end-state>
+  <end-state id="casExpiredPassView" view="casExpiredPassView" parent="#abstactPasswordChangeView" />
+  <end-state id="casMustChangePassView" view="casMustChangePassView" parent="#abstactPasswordChangeView" />
+  <end-state id="casAccountDisabledView" view="casAccountDisabledView" />
+  <end-state id="casAccountLockedView" view="casAccountLockedView" />
+  <end-state id="casBadHoursView" view="casBadHoursView" />
+  <end-state id="casBadWorkstationView" view="casBadWorkstationView" />
+
+  <!-- 
+  description:认证成功后，post方式返回客户端的
+   -->
+  <end-state id="postView" view="postResponseView">
+      <on-entry>
+          <set name="requestScope.parameters" value="requestScope.response.attributes" />
+          <set name="requestScope.originalUrl" value="flowScope.service.id" />
+      </on-entry>
+  </end-state>
+
+	<!-- 
+		The "redirect" end state allows CAS to properly end the workflow while still redirecting
+		the user back to the service required.
+	-->
+   <!-- 
+  description:认证成功后，redirect方式返回客户端的
+   -->
+ <end-state id="redirectView" view="externalRedirect:#{requestScope.response.url}" />
+	
+	
+	
+	
+	<end-state id="viewServiceErrorView" view="viewServiceErrorView" />
+    
+   <end-state id="viewServiceSsoErrorView" view="viewServiceSsoErrorView" />
+
+  <global-transitions>
+    <!--
+      CAS-1023 This one is simple - redirects to a login page (same as renew) when 'ssoEnabled' flag is unchecked
+      instead of showing an intermediate unauthorized view with a link to login page
+    -->
+    <transition to="viewLoginForm" on-exception="org.jasig.cas.services.UnauthorizedSsoServiceException"/>
+
+    <transition to="viewServiceErrorView" on-exception="org.springframework.webflow.execution.repository.NoSuchFlowExecutionException" />
+    <transition to="viewServiceErrorView" on-exception="org.jasig.cas.services.UnauthorizedServiceException" />
+  </global-transitions>
+</flow>

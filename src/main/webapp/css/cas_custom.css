@@ -1,0 +1,117 @@
+/*
+ * Licensed to Jasig under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Jasig licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License.  You may obtain a
+ * copy of the License at the following location:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+html, body, div, span, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, abbr, address, cite, code, del, dfn, em, img, ins, kbd, q, samp, small, strong, sub, sup, var, b, i, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td, article, aside, canvas, details, figcaption, figure, .footer, .header, hgroup, menu, nav, section, summary, time, mark, audio, video { margin: 0; padding: 0; border: 0; outline: 0; font-size: 100%; vertical-align: baseline; background: transparent; }
+*{padding:0;margin:0;}
+body { line-height: 1; }
+nav ul { list-style: none; }
+blockquote, q { quotes: none; }
+blockquote:before, blockquote:after, q:before, q:after { content: ''; content: none; }
+a { margin: 0; padding: 0; font-size: 100%; vertical-align: baseline; background: transparent; }
+ins { background-color: #ff9; color: #000; text-decoration: none; }
+mark { background-color: #ff9; color: #000; font-style: italic; font-weight: bold; }
+del { text-decoration: line-through; }
+abbr[title], dfn[title] { border-bottom: 1px dotted; cursor: help; }
+table { border-collapse: collapse; border-spacing: 0; }
+hr { display: block; height: 1px; border: 0; border-top: 1px solid #cccccc; margin: 7px 0; padding: 0; }
+input, select { vertical-align: middle; }
+body { font-family: Verdana, sans-serif; font-size: 14px; line-height: 14px;  }
+
+.header,#container,.footer{float:left;width:100%;padding:0;margin:0;}
+.header #title,#container #content,.footer #copyright{width:1000px;margin:0px auto;}
+.wrap{width:100%;float:left;padding:0;margin:0;}
+
+.header {border-bottom:1px solid #f2f2f2;height: 73px;line-height: 73px;}
+#title{color: #000;font-size: 20px; }
+#title #logo{float:left; }
+#title #logo img{ vertical-align: middle;}
+#title #logo span{margin-left:15px;}
+#title #words{float:right;}
+
+#container {padding: 10px 0;}
+#content{}
+
+.footer {padding:10px 0;}
+.footer #copyright{color: #999;}
+.footer #copyright a{color: #999;}
+
+#login { width: 398px; float: right;border-left: 1px solid #f2f2f2;  }
+
+#fm1 {}
+#fm1 .row { padding: 8px 0; }
+#fm1 .row-check { padding: 0; }
+#fm1 .row label.first {display:inline-block;margin-right: 8px; width: 88px;font-size: 16px;text-align: right;color: #777; }
+#fm1 .row label.agree{font-size:12px;}
+#fm1 .row input[type=text],
+#fm1 .row input[type=password] { border: 1px solid #DDDDDD; height: 30px;line-height: 30px;width: 214px;padding-left: 6px;}
+#fm1 .row input[type=text].small,
+#fm1 .row input[type=password].small{width: 107px;}
+#fm1 .row .btn-submit {outline: none;color: white;  width: 222px;height: 40px;line-height: 40px;border: none;background: #cf0000 }
+#fm1 .row .btn-submit:hover{ cursor: pointer; }
+#fm1 .row-check label.rememberme{}
+#fm1 .row-check a.forget{float:right;margin-right:80px}
+#fm1 .register-row{padding-left:96px;}
+
+.other-login{padding:10px 0 0 96px;border-top: 1px solid #f2f2f2;}
+.other-login  p{padding: 10px 0;}
+.other-login  span{display: inline-block;width:40px;padding-left:25px;line-height: 30px;height: 30px;border: 1px solid #f2f2f2;text-align: left;}
+
+#sidebar {width:600px;float:left;}
+#sidebar .sidebar-content { }
+
+#register { width: 715px; float: left;  }
+#other{width:254px;float:left;padding:30px 0 0 30px;border-left: 1px solid #f2f2f2;}
+.other-content .oauth{border-top: 1px solid #f2f2f2; padding: 10px 0;}
+.other-content .oauth p{padding: 10px 0;}
+.other-content .oauth span{display: inline-block;width:40px;padding-left:25px;line-height: 30px;height: 30px;border: 1px solid #f2f2f2;text-align: left;}
+.other-content .already{border-top: 1px solid #f2f2f2; padding: 10px 0;}
+
+
+.qq{background:rgba(0, 0, 0, 0) url("../images/login.png") no-repeat scroll 5px -24px;}
+.sina{background:rgba(0, 0, 0, 0) url("../images/login.png") no-repeat scroll 5px -53px}
+.weixin{background:rgba(0, 0, 0, 0) url("../images/login.png") no-repeat scroll 5px 5px}
+
+
+#retakeP{margin-top:70px;margin-bottom:70px;margin-left:345px;}
+.retakeP-step1{background: url('../images/retakePFlow.jpg') no-repeat 0 0;width: 1000px; height: 35px;margin: 0 0;}
+.retakeP-step2{background: url('../images/retakePFlow.jpg') no-repeat 0 -39px;width: 1000px; height: 35px;margin: 0 0;}
+.retakeP-step3{background: url('../images/retakePFlow.jpg') no-repeat 0 -78px;width: 1000px; height: 35px;margin: 0 0;}
+.retakeP-step4{background: url('../images/retakePFlow.jpg') no-repeat 0 -119px;width: 1000px; height: 35px;margin: 0 0;}
+
+#retakeP .timer{line-height:30px; height: 30px;width:95px;text-align: center;border:1px solid #ddd;display:inline-block;vertical-align: middle;margin-left: 6px;cursor: pointer;}
+#retakeP .timer-pass{}
+
+#msg { padding: 10px;/* margin-bottom: 10px; *//* margin-top:-10px; */margin-right:0px;  display: block; }
+#msg h2 { font-size: 1.4em; margin-bottom: 1em; }
+#msg.errors { border: 1px solid rgb(255, 238, 221); color: #BB0000;/*  padding-left: 100px; background: url(../images/error.gif) no-repeat 20px center; */ }
+#msg.success { border: 1px dotted #390; color: #390; /* padding-left: 100px; background: url(../images/confirm.gif) no-repeat 20px center;  */}
+#msg.info { border: 1px dotted #008; color: #008;/*  padding-left: 100px; background: url(../images/info.gif) no-repeat 20px center;  */}
+#msg.question { border: 1px dotted #390; color: #390;/*  padding-left: 100px; background: url(../images/question.png) no-repeat 20px center; */ }
+#msg.warn { border: 1px dotted #960; color: #960; /* padding-left: 100px; background: #ffbc8f url(../images/info.gif) no-repeat 20px center; */ }
+#msg.warn .message { color: black; margin: 1em; font-size: 1.4em }    
+span#msg{ margin-left:96px;display:inline-block;width:200px;}
+
+
+.service-content{padding:10px;display: none;overflow: hidden;}
+.service-content h2{text-align: center;font-weight: 700;margin-top: 15px; font-size: 14px;font-family: \5B8B\4F53,sans-serif;}
+.service-content h3{margin-top: 15px;   line-height: 22px;}
+.service-content p{margin-left: 2em;font-size: 12px; line-height: 18px; margin-top: 5px;}
+   
+   
+ 

@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Licensed to Jasig under one or more contributor license
+    agreements. See the NOTICE file distributed with this work
+    for additional information regarding copyright ownership.
+    Jasig licenses this file to you under the Apache License,
+    Version 2.0 (the "License"); you may not use this file
+    except in compliance with the License.  You may obtain a
+    copy of the License at the following location:
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+
+-->
+<flow xmlns="http://www.springframework.org/schema/webflow"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.springframework.org/schema/webflow
+                          http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd">
+
+    <var name="user" class="com.travel.cas.site.member.model.User" />
+   
+    <!-- 
+   description:注册环境初始化			
+     -->
+    <on-start>
+        <evaluate expression="initialRegisterFlowAction" />
+    </on-start>
+
+	
+	<!--  
+	description:生成registerTicket并存储于flowscop中；存储格式为：“registerTicket”:“RT-2-dflkdjljklj-cas.wdlt.com”。
+	-->
+	<action-state id="generateRegisterTicket">
+      <evaluate expression="generateRegisterTicketAction.generate(flowRequestContext)" />
+		<transition on="generated" to="viewRegisterForm" />
+	</action-state>
+    
+    <!--  
+   description:
+   			1>、在viewscop范围内存储commandName='user'
+   			2>、进入view（默认为view/jsp/default/ui/casRegisterView.jsp）
+   			3>、用户提交
+   			4>、执行authenticationViaFormAction.doBind、绑定数据、验证数据合法性、跳转至realSubmit state。
+   			4.1>、authenticationViaFormAction说明
+   					class:AuthenticationViaFormAction
+   					method:doBind作用->自定义数据绑定，即覆盖spring的数据bind。    
+    -->
+	<view-state id="viewRegisterForm" view="casRegisterView" model="user">
+        <binder>
+            <binding property="mobile" />
+            <binding property="password" />
+            <binding property="confirmpassword" />
+            <binding property="email" />
+            <binding property="agree" />
+        </binder>
+        <on-entry>
+            <set name="viewScope.commandName" value="'user'" />
+        </on-entry>
+ 
+		<transition on="submit" bind="true" validate="true" to="realSubmit"/>
+	</view-state>
+
+  <!--  
+  description:
+  -->
+  <action-state id="realSubmit">
+    <evaluate expression="registerViaFormAction.submit(flowRequestContext, flowScope.user, messageContext)" />
+    <transition on="success" to="redirectView" />
+   <!--  <transition on="registerFailure" to="handleRegisterFailure" />
+    <transition on="error" to="generateRegisterTicket" /> -->
+  </action-state>
+
+  <!--  
+  description:处理认证失败
+               帐号已经存在异常=> 生成register token、登录页面
+                未知=>生成register token、登录页面
+  -->
+  <!-- <action-state id="handleRegisterFailure">
+    <evaluate expression="registerExceptionHandler.handle(currentEvent.attributes.error, messageContext)" />
+    <transition on="AccountAlreadyExistException" to="generateRegisterTicket"/>
+    <transition on="UNKNOWN" to="generateRegisterTicket"/>
+  </action-state> -->
+ 
+ <!--   <action-state id="redirect">
+       <evaluate expression="redirectLoginAction"/>
+       <transition to="redirectView" />
+   </action-state> -->
+  
+   <end-state id="redirectView" view="externalRedirect:servletRelative:#{flowScope.loginUrl}" />
+
+	<!-- 全局异常 处理 -->
+	<exception-handler bean="registerExceptionHandler"/>
+	
+</flow>

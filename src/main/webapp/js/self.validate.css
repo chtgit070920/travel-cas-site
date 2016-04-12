@@ -1,0 +1,32 @@
+#login label.error{
+	vertical-align: middle;
+	display: block;
+	width:180px;
+	height: 24px;
+	line-height: 24px;
+   background-color: #fff7dc;
+   border: 1px solid #f4e09d;
+   padding: 0 10px 0 25px;
+	margin:2px 0 0 96px;
+   font-size:14px;
+   color: #666;
+   background:url('../images/validate.png') no-repeat 5px 4px;
+}
+
+#register label.error,#retakeP label.error{   
+  vertical-align: middle;
+  display: inline-block;
+  height: 30px;
+  line-height: 30px;
+  background-color: #fff7dc;
+  border: 1px solid #f4e09d;
+  padding: 0 10px 0 25px;
+  margin-left: 10px;
+  font-size:14px;
+  color: #666;
+  background:url('../images/validate.png') no-repeat 5px 6px;
+}   
+
+
+
+    

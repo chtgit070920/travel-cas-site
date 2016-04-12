@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Licensed to Jasig under one or more contributor license
+    agreements. See the NOTICE file distributed with this work
+    for additional information regarding copyright ownership.
+    Jasig licenses this file to you under the Apache License,
+    Version 2.0 (the "License"); you may not use this file
+    except in compliance with the License.  You may obtain a
+    copy of the License at the following location:
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+
+-->
+<flow xmlns="http://www.springframework.org/schema/webflow"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.springframework.org/schema/webflow
+                          http://www.springframework.org/schema/webflow/spring-webflow-2.0.xsd">
+
+  
+  
+   
+    <!-- 
+   description:取回密码环境初始化			
+     -->
+    <on-start>
+        <evaluate expression="initialRetakePFlowAction" />
+    </on-start>
+	 
+	<!--  
+	description:生成retakePTicket并存储于flowscop中；存储格式为：“retakePTicket*”:“rpt*-2-dflkdjljklj-cas.wdlt.com”。
+	-->
+	<action-state id="generateRetakePTicketInputTicket">
+      <evaluate expression="generateRetakePTicketAction.generateForInput(flowRequestContext)" />
+		<transition on="generated" to="viewInputForm" />
+	</action-state>
+	<!--  
+   description:
+    -->
+	<view-state id="viewInputForm" view="casRetakePInputView" model="input" >
+		 <var name="input" class="com.travel.cas.site.member.model.Retake.Input" />
+		 <binder>
+            <binding property="username" />
+            <binding property="validcode" />
+        </binder>
+        <on-entry>
+            <set name="viewScope.commandName" value="'input'" />
+        </on-entry>
+		  <transition on="submit" bind="true" validate="true"  to="inputRealSubmit">
+		  		<set name="requestScope.input" value="input"></set>
+		  </transition>
+		  
+	</view-state>
+	<!--  
+   description:
+    -->
+	<action-state id="inputRealSubmit" >
+    <evaluate expression="retakePViaFormAction.inputSubmit(flowRequestContext,requestScope.input,messageContext)" />
+    <transition on="success" to="generateRetakePTicketVerifyTicket" />
+    <transition on="error" to="generateRetakePTicketInputTicket" />
+  </action-state>
+	
+	
+	<!--  
+	description:生成retakePTicket并存储于flowscop中；存储格式为：“retakePTicket*”:“rpt-2-dflkdjljklj-cas.wdlt.com”。
+	-->
+	<action-state id="generateRetakePTicketVerifyTicket">
+      <evaluate expression="generateRetakePTicketAction.generateForVerify(flowRequestContext)" />
+		<transition on="generated" to="viewVerifyForm" />
+	</action-state>
+	<!--  
+   description:
+    -->
+    <!-- result="viewScope.data" result-type="com.travel.cas.sitee.member.model.Retake.Verify" -->
+	<view-state id="viewVerifyForm" view="casRetakePVerifyView" model="verify" >
+		  <var name="verify" class="com.travel.cas.site.member.model.Retake.Verify" />
+		  <binder>
+            <binding property="type" />
+            <binding property="msgcode" />
+        </binder>
+        <on-entry>
+            <set name="viewScope.commandName" value="'verify'" />
+        </on-entry>
+        	<on-render>
+        		<evaluate expression="retakePViaFormAction.initVerifyForm(flowRequestContext,messageContext,verify)"  />
+        		<evaluate expression="generateRetakePTicketAction.generateForSend(flowRequestContext)" />
+        	</on-render>
+        	
+        	<transition on="yzm" bind="true">
+        		<evaluate expression="verify.setSend('true')"/>
+        	</transition>
+		  <transition on="submit" bind="true" validate="true"  to="verifyRealSubmit">
+		  		<set name="requestScope.verify" value="verify"></set> 
+		  </transition>
+		  
+	</view-state>
+	 <!-- <exception-handler bean=""/> -->
+
+		
+	<!--  
+   description:
+    -->
+	<action-state id="verifyRealSubmit">
+	<on-entry>
+		<evaluate expression="requestScope.verify.setSend(null)"/>
+	</on-entry>
+    <evaluate expression="retakePViaFormAction.verifySubmit(flowRequestContext,requestScope.verify, messageContext)" />
+    <transition on="success" to="generateRetakePTicketResetTicket" />
+    <transition on="error" to="generateRetakePTicketVerifyTicket" />
+  </action-state>
+
+	
+	<!--  
+	description:生成retakePTicket并存储于flowscop中；存储格式为：“retakePTicket*”:“rpt-2-dflkdjljklj-cas.wdlt.com”。
+	-->
+	<action-state id="generateRetakePTicketResetTicket">
+      <evaluate expression="generateRetakePTicketAction.generateForReset(flowRequestContext)" />
+      <evaluate expression="retakePViaFormAction.generateResetModel()"></evaluate>
+		<transition on="generated" to="viewResetForm" />
+	</action-state>
+	<!--  
+   description:
+    -->    
+	<view-state id="viewResetForm" view="casRetakePResetView" model="reset">
+		<var name="reset" class="com.travel.cas.site.member.model.Retake.Reset" />
+		<binder>
+            <binding property="newpwd" />
+            <binding property="confirmpwd" />
+        </binder>
+        <on-entry>
+            <set name="viewScope.commandName" value="'reset'" />
+        </on-entry>
+		  <transition on="submit" bind="true" validate="true"   to="resetRealSubmit">
+		  	<set name="requestScope.reset" value="reset"></set> 
+		  </transition>
+		  
+		  
+	</view-state>
+	<!--  
+   description:
+    -->
+	<action-state id="resetRealSubmit">
+    <evaluate expression="retakePViaFormAction.resetSubmit(flowRequestContext, requestScope.reset,messageContext)" />
+    <transition on="success" to="viewSuccessResult" />
+    <transition on="error" to="generateRetakePTicketResetTicket" />
+  </action-state>
+	
+	<!--  
+   description:
+    -->  	
+	<end-state id="viewSuccessResult" view="casRetakePResultView" />
+	<end-state id="viewFailureResult" view="casRetakePResultView" />
+	
+	<!-- 全局异常 处理 -->
+	<exception-handler bean="regtakePExceptionHandler"/>
+	
+</flow>

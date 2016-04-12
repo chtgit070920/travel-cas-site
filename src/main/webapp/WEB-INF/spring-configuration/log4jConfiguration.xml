@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Licensed to Jasig under one or more contributor license
+    agreements. See the NOTICE file distributed with this work
+    for additional information regarding copyright ownership.
+    Jasig licenses this file to you under the Apache License,
+    Version 2.0 (the "License"); you may not use this file
+    except in compliance with the License.  You may obtain a
+    copy of the License at the following location:
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+
+-->
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <description>
+        Log4J initialization.  Configuration options are sourced from cas.properties.  This allows deployers to externalize
+        both cas.properties and log4j.xml, so that a single cas.war file can be deployed to multiple tiers or hosts without
+        having to do any post configuration.  This approach helps to preserve configuration between upgrades.
+
+        Deployers should not have to edit this file.
+    </description>
+   
+   <!-- log4j 配置 -->
+	
+	<!-- 
+	通过MethodInvokingFactoryBean工厂Bean，可以将指定方法返回值注入成为目标Bean的属性值，
+	MethodInvokingFactoryBean用来获得指定方法的返回值，该方法可以是静态方法也可以是实例方法。 
+	获得的方法返回值既可以被注入到指定Bean实例的指定属性，也可以直接定义成Bean实例。
+	-->
+
+   <bean id="log4jInitialization" class="org.springframework.beans.factory.config.MethodInvokingFactoryBean"
+        p:targetClass="org.springframework.util.Log4jConfigurer" p:targetMethod="initLogging" p:arguments-ref="arguments"/>
+    
+   <util:list id="arguments">
+       <value>${log4j.config.location:classpath:logs/log4j.xml}</value>
+       <value>${log4j.refresh.interval:60000}</value>
+   </util:list>
+</beans>
